@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabaseCoordinacion } from '@/lib/supabaseCoordinacion';
-import { Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Save, Loader2, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 
 interface FormularioServicioProps {
   onSuccess: () => void;
+  servicioAEditar?: any;
+  onCancelEdit?: () => void;
 }
 
 const emptyForm = () => ({
@@ -25,13 +27,44 @@ const emptyForm = () => ({
   ot: '',
 });
 
-export default function FormularioServicio({ onSuccess }: FormularioServicioProps) {
+export default function FormularioServicio({ 
+  onSuccess, 
+  servicioAEditar,
+  onCancelEdit 
+}: FormularioServicioProps) {
   const [form, setForm] = useState(emptyForm());
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({
     type: null,
     message: '',
   });
+
+  const isEditing = !!servicioAEditar;
+
+  // Cargar datos cuando se selecciona un servicio para editar
+  useEffect(() => {
+    if (servicioAEditar) {
+      setForm({
+        fecha: servicioAEditar.fecha || '',
+        hora_inicio: servicioAEditar.hora_inicio || '',
+        hora_termino: servicioAEditar.hora_termino || '',
+        tipo_trabajo: servicioAEditar.tipo_trabajo || '',
+        local: servicioAEditar.local || '',
+        direccion: servicioAEditar.direccion || '',
+        atm: servicioAEditar.atm || '',
+        comuna: servicioAEditar.comuna || '',
+        asignado_a: servicioAEditar.asignado_a || '',
+        nombre_solicitante: servicioAEditar.nombre_solicitante || '',
+        solicitado_por: servicioAEditar.solicitado_por || '',
+        banco_empresa: servicioAEditar.banco_empresa || '',
+        informe: servicioAEditar.informe || '',
+        ot: servicioAEditar.ot || '',
+      });
+      setStatus({ type: null, message: '' });
+    } else {
+      setForm(emptyForm());
+    }
+  }, [servicioAEditar]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -49,14 +82,33 @@ export default function FormularioServicio({ onSuccess }: FormularioServicioProp
     );
 
     try {
-      const { error } = await supabaseCoordinacion.from('servicios').insert([payload]);
+      if (isEditing) {
+        // Actualizar servicio existente
+        const { error } = await supabaseCoordinacion
+          .from('servicios')
+          .update(payload)
+          .eq('id', servicioAEditar.id);
 
-      if (error) {
-        setStatus({ type: 'error', message: `Error de Supabase: ${error.message}` });
+        if (error) {
+          setStatus({ type: 'error', message: `Error al actualizar: ${error.message}` });
+        } else {
+          setStatus({ type: 'success', message: 'Servicio actualizado exitosamente.' });
+          setForm(emptyForm());
+          onSuccess();
+        }
       } else {
-        setStatus({ type: 'success', message: 'Servicio guardado exitosamente.' });
-        setForm(emptyForm());
-        onSuccess();
+        // Insertar nuevo servicio
+        const { error } = await supabaseCoordinacion
+          .from('servicios')
+          .insert([payload]);
+
+        if (error) {
+          setStatus({ type: 'error', message: `Error al guardar: ${error.message}` });
+        } else {
+          setStatus({ type: 'success', message: 'Servicio guardado exitosamente.' });
+          setForm(emptyForm());
+          onSuccess();
+        }
       }
     } catch (err: unknown) {
       console.error(err);
@@ -67,10 +119,10 @@ export default function FormularioServicio({ onSuccess }: FormularioServicioProp
   };
 
   return (
-    <div className="glass-card p-6 border border-white/5 relative">
-      <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-400 mb-6 flex items-center gap-2">
-        <span className="w-1.5 h-3 rounded bg-indigo-500"></span>
-        Registrar Nuevo Servicio
+    <div className={`glass-card p-6 border transition-all duration-300 relative ${isEditing ? 'border-brand-500/30 bg-brand-950/5' : 'border-white/5'}`}>
+      <h3 className="text-sm font-bold uppercase tracking-wider text-brand-500 mb-6 flex items-center gap-2">
+        <span className="w-1.5 h-3 rounded bg-brand-500"></span>
+        {isEditing ? 'Editar Servicio ATM' : 'Registrar Nuevo Servicio'}
       </h3>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -234,7 +286,7 @@ export default function FormularioServicio({ onSuccess }: FormularioServicioProp
         </div>
 
         {/* Acciones & Status */}
-        <div className="md:col-span-4 flex items-center justify-between gap-4 pt-2">
+        <div className="md:col-span-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-2">
           <div className="flex-1">
             {status.type === 'success' && (
               <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium">
@@ -249,23 +301,38 @@ export default function FormularioServicio({ onSuccess }: FormularioServicioProp
               </div>
             )}
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary py-2.5 px-6 flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:shadow-indigo-500/25 shrink-0"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Guardar Servicio
-              </>
+          
+          <div className="flex items-center gap-3 justify-end">
+            {isEditing && (
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                disabled={loading}
+                className="btn-secondary py-2.5 px-5 flex items-center gap-1.5 shrink-0"
+              >
+                <XCircle className="w-4 h-4" />
+                Cancelar
+              </button>
             )}
-          </button>
+            
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary py-2.5 px-6 flex items-center gap-2 shrink-0"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {isEditing ? 'Actualizando...' : 'Guardando...'}
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  {isEditing ? 'Guardar Cambios' : 'Guardar Servicio'}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </form>
     </div>

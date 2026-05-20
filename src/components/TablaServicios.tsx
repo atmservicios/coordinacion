@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, SlidersHorizontal, Edit } from 'lucide-react';
 
 interface Servicio {
   id: string;
@@ -23,9 +23,10 @@ interface Servicio {
 
 interface TablaServiciosProps {
   servicios: Servicio[];
+  onEdit?: (servicio: Servicio) => void;
 }
 
-export default function TablaServicios({ servicios }: TablaServiciosProps) {
+export default function TablaServicios({ servicios, onEdit }: TablaServiciosProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterComuna, setFilterComuna] = useState('');
   const [filterAsignado, setFilterAsignado] = useState('');
@@ -95,7 +96,7 @@ export default function TablaServicios({ servicios }: TablaServiciosProps) {
 
           {/* Indicador de cantidad */}
           <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider shrink-0 bg-slate-900/40 border border-white/5 py-2 px-3 rounded-lg flex items-center gap-2">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-brand-500" />
             Mostrando {filteredServicios.length} de {servicios.length} registros
           </div>
         </div>
@@ -148,6 +149,7 @@ export default function TablaServicios({ servicios }: TablaServiciosProps) {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-950 text-slate-400 font-bold border-b border-white/[0.06] text-[10px] uppercase tracking-wider">
+                <th className="p-4 whitespace-nowrap text-center">Acciones</th>
                 <th className="p-4 whitespace-nowrap">Fecha</th>
                 <th className="p-4 whitespace-nowrap">Hora Inicio</th>
                 <th className="p-4 whitespace-nowrap">Hora Término</th>
@@ -168,11 +170,20 @@ export default function TablaServicios({ servicios }: TablaServiciosProps) {
               {paginatedServicios.length > 0 ? (
                 paginatedServicios.map((s, idx) => (
                   <tr key={s.id || idx} className="hover:bg-white/[0.02] text-slate-300 transition-colors">
+                    <td className="p-4 text-center whitespace-nowrap">
+                      <button
+                        onClick={() => onEdit && onEdit(s)}
+                        className="p-1.5 rounded bg-brand-500/10 text-brand-400 hover:bg-brand-500/20 border border-brand-500/20 hover:text-brand-300 transition-all duration-200"
+                        title="Editar servicio"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
                     <td className="p-4 font-medium whitespace-nowrap">{s.fecha || '-'}</td>
                     <td className="p-4 whitespace-nowrap">{s.hora_inicio || '-'}</td>
                     <td className="p-4 whitespace-nowrap">{s.hora_termino || '-'}</td>
                     <td className="p-4 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-semibold">
+                      <span className="px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 font-semibold">
                         {s.tipo_trabajo || '-'}
                       </span>
                     </td>
@@ -190,7 +201,7 @@ export default function TablaServicios({ servicios }: TablaServiciosProps) {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={14} className="p-8 text-center text-slate-500 text-sm">
+                  <td colSpan={15} className="p-8 text-center text-slate-500 text-sm">
                     No se encontraron servicios que coincidan con los filtros.
                   </td>
                 </tr>
